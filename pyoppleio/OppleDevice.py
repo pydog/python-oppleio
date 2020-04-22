@@ -1,4 +1,6 @@
+import sys
 import socket
+import datetime
 
 from . import const, Message
 
@@ -23,6 +25,7 @@ class OppleDevice(object):
         self.server_port = self.socket.getsockname()[1]
         self.is_init = False
         self.is_online = False
+        self.last_update = None
 
         if message:
             self.init(message)
@@ -40,6 +43,8 @@ class OppleDevice(object):
         self.ip = '.'.join(map(lambda x: str(x), self.ip_raw))
         self.mac = ':'.join(map(lambda x: hex(x)[2:], self.mac_raw))
 
+        self.last_update = datetime.datetime.now()
+
         self.is_init = True
         self.is_online = True
 
@@ -48,6 +53,15 @@ class OppleDevice(object):
         message = self.send('SEARCH', reply=True)
         if message:
             self.init(message)
+        else:
+            for i in range(10):
+                message = self.send('SEARCH', reply=True)
+                if message:
+                    self.init(message)
+                    break
+                else:
+                    continue
+
 
     def send(self, message_type, data=None, reply=False):
         message = Message.build_message(MESSAGE_TYPE[message_type], data, self)
@@ -59,14 +73,16 @@ class OppleDevice(object):
                     data, address = self.socket.recvfrom(1024)
                     incoming_message = Message.parse_message(data, self)
 
+
                     if message.get_request_sn() != incoming_message.get_response_sn():
                         continue
 
-                    self.is_online = True
+                    #self.is_online = True
                     return incoming_message
 
                 except socket.timeout:
-                    self.is_online = False
+                    #print(datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'), "socket sendto timeout", message_type)
+                    #self.is_online = False
                     return None
 
 
@@ -91,7 +107,9 @@ def search():
             else:
                 break
 
+            print("pydog", sys._getframe().f_lineno, sys._getframe().f_code.co_name, "Find new device")
             device_list.append(device)
+
             yield device
         except socket.timeout:
             break
