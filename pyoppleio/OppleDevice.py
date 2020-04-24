@@ -24,7 +24,9 @@ class OppleDevice(object):
         self.mac_raw = ()
         self.server_port = self.socket.getsockname()[1]
         self.is_init = False
-        self.is_online = False
+        # Set the default online status to be true for the opple light compoment is build in and could not modify the code
+        # In order to fix hass will create dumplicated entity
+        self.is_online = True
         self.last_update = None
 
         if message:
